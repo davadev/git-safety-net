@@ -1,17 +1,43 @@
 # git-safety-net
 
-`git-safety-net` is a tiny Bash safety net for coding projects.
+`git-safety-net` is a tiny, production-minded Bash utility that protects coding projects with automatic local snapshots.
 
-It gives you two commands:
+Many projects already have their own Git repositories, but modern LLM-assisted workflows introduce a new risk profile: an agent can accidentally perform a destructive action, rewrite history, or simply work for long stretches without committing. `git-safety-net` adds a separate, hidden, continuously-updated safety layer so you can recover file state by time even when the main project repo becomes messy or damaged.
 
-- `gsn` (`git-safety-net.sh`): protect a project by syncing it into a hidden store and recording snapshots.
-- `gsnr` (`git-safety-net-restore.sh`): restore one file as it existed at a chosen time.
+It has two scripts:
 
-You use it in plain language (protect/restore by time). Hidden Git is used internally as an implementation detail.
+- `git-safety-net.sh` (`gsn`): protect a project and keep snapshots up to date.
+- `git-safety-net-restore.sh` (`gsnr`): restore one file as it existed at a chosen time.
 
-## Remote-use model
+You interact with it as **protect** and **restore by time**. Git is used internally, but hidden from normal usage.
 
-The scripts are designed for curl-based usage; they do not need permanent installation.
+## Why use it
+
+- very small: Bash + `git` + `rsync`
+- local-first: no cloud account, no daemon, no database
+- safe by default: source project Git is never touched
+- efficient: incremental sync, commits only when files changed
+- easy to trust: plain files, readable metadata
+
+## Quick start
+
+Run from the project you want to protect:
+
+```bash
+./git-safety-net.sh
+```
+
+On first run, onboarding asks you to confirm source path, backup root, interval, expiration, and optional aliases.
+
+Then restore a file by time:
+
+```bash
+./git-safety-net-restore.sh --file src/auth.py --time "2026-04-01 14:30"
+```
+
+## Remote-use model (curl-friendly)
+
+These scripts are designed to be fetched on demand (no permanent installation required).
 
 Example aliases:
 
@@ -20,44 +46,63 @@ alias gsn='bash <(curl -fsSL https://example.com/git-safety-net.sh)'
 alias gsnr='bash <(curl -fsSL https://example.com/git-safety-net-restore.sh)'
 ```
 
-On first run, `gsn` can add these aliases to your shell rc file for you.
+`gsn` can add aliases automatically during onboarding (idempotently, in a marked block).
 
-## First-run onboarding
+## Default local storage
 
-When project metadata does not exist yet (or if `--setup` is passed), `gsn` runs interactive onboarding:
-
-1. pick project directory (default: current directory)
-2. confirm hidden backup root (default: `~/.git-safety-net`)
-3. choose whether aliases should be added
-4. confirm interval (default: `180` seconds)
-5. confirm expiration (default: end of local day)
-6. review summary and confirm start
-
-After onboarding, normal runs are non-interactive.
-
-## Local persistence
-
-By default, persistent state lives under:
+By default, all persistent data is under:
 
 `~/.git-safety-net/`
 
-Per project (example `backend-a1b2c3d4`):
+Per protected project (example `backend-a1b2c3d4`):
 
 - hidden backup repo: `~/.git-safety-net/backend-a1b2c3d4/`
 - metadata file: `~/.git-safety-net/backend-a1b2c3d4.env`
 - lock directory: `~/.git-safety-net/backend-a1b2c3d4.lock`
 
-No files are written into your source project.
+Only these artifacts are persisted, plus optional alias lines in your shell rc.
 
-## Important behavior
+## First-run onboarding behavior
 
-- source project `.git` is never touched
-- source `.git/` is always excluded from syncing
-- hidden backup repo is fully separate from your project git
-- snapshots are created only when files changed
-- restore writes only the requested file
+Onboarding runs when metadata is missing for the project (or when `--setup` is passed):
 
-## Example commands
+1. confirm project directory (default: current directory)
+2. confirm hidden backup root (default: `~/.git-safety-net`)
+3. choose alias auto-setup (`gsn`, `gsnr`)
+4. confirm interval (default: `180` seconds)
+5. confirm expiration (default: end of local day)
+6. review and confirm summary before starting
+
+After onboarding, normal runs are non-interactive.
+
+## Safety model
+
+- never runs Git in your source project
+- always excludes source `.git/` from sync
+- backup repository is fully separate and hidden
+- rejects unsafe path relationships (source inside backup, backup inside source)
+- per-project lock prevents duplicate watchers for the same project
+- different projects can be watched in parallel
+
+## Snapshot behavior
+
+- source files sync into hidden backup via `rsync --delete`
+- `.gitignore` is used as an exclusion source where practical
+- common build/cache/junk paths are excluded by default
+- extra excludes can be added with repeatable `--exclude`
+- snapshot commit is created only when changes exist
+- no-op runs clearly report: "No changes detected, skipping snapshot"
+
+## Restore behavior
+
+`gsnr` restores one file, from the latest snapshot at or before your requested time.
+
+- `--list` shows recent snapshot times
+- `--dry-run` previews what would be restored
+- restore does not mutate the hidden backup repo
+- if file did not exist at that time, you get a clear message and no write occurs
+
+## Common commands
 
 Protect current directory:
 
@@ -77,10 +122,16 @@ Protect for 3 hours:
 ./git-safety-net.sh --expire 3h
 ```
 
-Run one sync pass only:
+Single run (no loop):
 
 ```bash
 ./git-safety-net.sh --once
+```
+
+Re-run interactive setup:
+
+```bash
+./git-safety-net.sh --setup
 ```
 
 List recent snapshots:
@@ -100,3 +151,15 @@ Dry-run restore:
 ```bash
 ./git-safety-net-restore.sh --file src/auth.py --time "2026-04-01 14:30" --dry-run
 ```
+
+## Requirements
+
+- Bash (macOS or Linux)
+- `git`
+- `rsync`
+
+## Notes
+
+- Hidden Git is an implementation detail for reliable snapshots.
+- You do not need commit hashes or Git commands to use the tool.
+- Your source project's existing Git history remains untouched.
