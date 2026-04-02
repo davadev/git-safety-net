@@ -4,6 +4,11 @@ IFS=$'\n\t'
 
 DEFAULT_BASE="${HOME}/.git-safety-net"
 DEFAULT_INTERVAL=180
+PROJECT_VERSION="v1.0.1"
+REMOTE_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net.sh"
+REMOTE_GSNR_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net-restore.sh"
+REMOTE_MAIN_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh"
+REMOTE_MAIN_GSNR_URL="https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net-restore.sh"
 
 QUIET=0
 SETUP=0
@@ -31,6 +36,7 @@ ONB_SOURCE=""
 ONB_BACKUP_ROOT=""
 ONB_INTERVAL=""
 ONB_EXPIRE=""
+ONB_ALIAS_MODE="remote"
 
 EXCLUDE_DEFAULTS=(
   ".git/" ".venv/" "venv/" "env/" "node_modules/" "dist/" "build/" "target/" "out/"
@@ -249,19 +255,53 @@ detect_rc_file() {
 
 setup_aliases() {
   local rc="$1"
+  local mode="$2"
+  local gsn_cmd
+  local gsnr_cmd
+  local local_dir
+  local local_gsn
+  local local_gsnr
+  local tmp
+
   mkdir -p "$(dirname "$rc")"
   touch "$rc"
-  if grep -Fq '>>> git-safety-net aliases >>>' "$rc"; then
-    log "Aliases already present in $rc"
-    return
+
+  if [ "$mode" = "local" ]; then
+    local_dir="$DEFAULT_BASE/bin"
+    local_gsn="$local_dir/git-safety-net.sh"
+    local_gsnr="$local_dir/git-safety-net-restore.sh"
+    mkdir -p "$local_dir"
+    curl -fsSL "$REMOTE_GSN_URL" -o "$local_gsn" 2>/dev/null || curl -fsSL "$REMOTE_MAIN_GSN_URL" -o "$local_gsn" || die "Could not install local gsn script"
+    curl -fsSL "$REMOTE_GSNR_URL" -o "$local_gsnr" 2>/dev/null || curl -fsSL "$REMOTE_MAIN_GSNR_URL" -o "$local_gsnr" || die "Could not install local gsnr script"
+    chmod +x "$local_gsn" "$local_gsnr" || die "Could not mark local scripts executable"
+    gsn_cmd="bash \"$local_gsn\""
+    gsnr_cmd="bash \"$local_gsnr\""
+    log "Installed local scripts in $local_dir"
+  else
+    gsn_cmd="bash <(curl -fsSL $REMOTE_GSN_URL)"
+    gsnr_cmd="bash <(curl -fsSL $REMOTE_GSNR_URL)"
   fi
+
+  tmp="${rc}.tmp.$$"
+  awk '
+    /^# >>> git-safety-net aliases >>>$/ {skip=1; next}
+    /^# <<< git-safety-net aliases <<</ {skip=0; next}
+    !skip {print}
+  ' "$rc" > "$tmp"
+  mv "$tmp" "$rc"
+
   {
     printf '\n# >>> git-safety-net aliases >>>\n'
-    printf "alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net.sh)'\n"
-    printf "alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net-restore.sh)'\n"
+    printf "alias gsn='%s'\n" "$gsn_cmd"
+    printf "alias gsnr='%s'\n" "$gsnr_cmd"
     printf '# <<< git-safety-net aliases <<<\n'
   } >> "$rc"
-  log "Alias added to $rc"
+
+  if [ "$mode" = "local" ]; then
+    log "Alias updated in $rc (mode: local)"
+  else
+    log "Alias updated in $rc (mode: remote)"
+  fi
   log "Reload your shell config or open a new terminal."
 }
 
@@ -282,7 +322,7 @@ prompt_yes_no() {
 run_onboarding() {
   local source_default="$1"
   local interval_default="$2"
-  local source_in root_in interval_in expire_in add_aliases rc
+  local source_in root_in interval_in expire_in add_aliases alias_mode alias_choice rc
 
   printf 'Welcome to git-safety-net.\n\n'
   printf 'Project directory to protect [%s]: ' "$source_default"
@@ -298,6 +338,17 @@ run_onboarding() {
     add_aliases="yes"
   fi
 
+  alias_mode="remote"
+  if [ "$add_aliases" = "yes" ]; then
+    printf 'Alias mode: [1] remote (most convenient), [2] local (~/.git-safety-net/) [1]: '
+    read -r alias_choice || die "Input aborted"
+    case "${alias_choice:-1}" in
+      2|local|LOCAL) alias_mode="local" ;;
+      *) alias_mode="remote" ;;
+    esac
+  fi
+  ONB_ALIAS_MODE="$alias_mode"
+
   printf 'Snapshot interval in seconds [%s]: ' "$interval_default"
   read -r interval_in || die "Input aborted"
   ONB_INTERVAL="${interval_in:-$interval_default}"
@@ -312,11 +363,12 @@ run_onboarding() {
   printf '  Interval: %s seconds\n' "$ONB_INTERVAL"
   [ -n "$ONB_EXPIRE" ] && printf '  Expire:   %s\n' "$ONB_EXPIRE" || printf '  Expire:   end of local day\n'
   printf '  Aliases:  %s\n' "$add_aliases"
+  [ "$add_aliases" = "yes" ] && printf '  Alias mode: %s\n' "$alias_mode"
 
   prompt_yes_no "Start protection now?" "yes" || die "Setup cancelled"
   if [ "$add_aliases" = "yes" ]; then
     rc="$(detect_rc_file)"
-    setup_aliases "$rc"
+    setup_aliases "$rc" "$alias_mode"
   fi
 }
 
