@@ -4,7 +4,7 @@ IFS=$'\n\t'
 
 DEFAULT_BASE="${HOME}/.git-safety-net"
 DEFAULT_INTERVAL=180
-PROJECT_VERSION="v1.0.2"
+PROJECT_VERSION="v1.0.3"
 REMOTE_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net.sh"
 REMOTE_GSNR_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net-restore.sh"
 REMOTE_MAIN_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh"
@@ -517,7 +517,7 @@ main() {
 
   while true; do
     [ "$(epoch_now)" -ge "$expire_epoch" ] && { log "Stopping: expiration time reached"; break; }
-    sync_once "$source" "$backup" "$meta_path" "$name" "$interval" "$expire_iso" "${USER_EXCLUDES[@]}"
+    sync_once "$source" "$backup" "$meta_path" "$name" "$interval" "$expire_iso" ${USER_EXCLUDES[@]+"${USER_EXCLUDES[@]}"}
     [ "$ONCE" -eq 1 ] && break
     [ "$(epoch_now)" -ge "$expire_epoch" ] && { log "Stopping: expiration time reached"; break; }
     sleep "$interval"
