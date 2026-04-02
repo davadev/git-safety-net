@@ -10,6 +10,7 @@ FILE_INPUT=""
 TIME_INPUT=""
 DRY_RUN=0
 LIST_MODE=0
+FORCE=0
 
 META_NAME=""
 META_SOURCE=""
@@ -30,6 +31,7 @@ Options:
   --time VALUE         Restore file as of this time (default: latest snapshot)
   --dry-run            Show what would be restored
   --list               Show recent snapshot times
+  --force              Overwrite an existing different file
 
 Examples:
   ./git-safety-net-restore.sh --list
@@ -133,6 +135,7 @@ parse_args() {
       --time) [ "$#" -ge 2 ] || die "--time requires a value"; TIME_INPUT="$2"; shift ;;
       --dry-run) DRY_RUN=1 ;;
       --list) LIST_MODE=1 ;;
+      --force) FORCE=1 ;;
       *) die "Unknown option: $1" ;;
     esac
     shift
@@ -187,6 +190,17 @@ main() {
   local tmp
   tmp="${target}.tmp.$$"
   git -C "$backup" show "$commit:$FILE_INPUT" > "$tmp"
+
+  if [ -f "$target" ] && [ "$FORCE" -ne 1 ]; then
+    if cmp -s "$target" "$tmp"; then
+      rm -f "$tmp"
+      log "File already matches snapshot; nothing to overwrite"
+      exit 0
+    fi
+    rm -f "$tmp"
+    die "Refusing to overwrite existing file: $target (use --force to overwrite)"
+  fi
+
   mv "$tmp" "$target"
   log "Restored to $target"
 }

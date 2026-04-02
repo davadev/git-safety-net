@@ -257,8 +257,8 @@ setup_aliases() {
   fi
   {
     printf '\n# >>> git-safety-net aliases >>>\n'
-    printf "alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh)'\n"
-    printf "alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net-restore.sh)'\n"
+    printf "alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net.sh)'\n"
+    printf "alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net-restore.sh)'\n"
     printf '# <<< git-safety-net aliases <<<\n'
   } >> "$rc"
   log "Alias added to $rc"

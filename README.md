@@ -11,6 +11,8 @@ It has two scripts:
 
 You interact with it as **protect** and **restore by time**. Git is used internally, but hidden from normal usage.
 
+First-time usage is meant to start directly from `curl` against this repository.
+
 ## Why use it
 
 - very small: Bash + `git` + `rsync`
@@ -24,7 +26,7 @@ You interact with it as **protect** and **restore by time**. Git is used interna
 First use is intentionally one-off via `curl` from this repository. From the project you want to protect, run:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net.sh)
 ```
 
 That first run starts onboarding and can optionally install `gsn` / `gsnr` aliases in your shell rc so future use is shorter.
@@ -40,7 +42,7 @@ On first run, onboarding asks you to confirm source path, backup root, interval,
 Then restore a file by time:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net-restore.sh) --file src/auth.py --time "2026-04-01 14:30"
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net-restore.sh) --file src/auth.py --time "2026-04-01 14:30"
 ```
 
 ## Remote-use model (curl-friendly)
@@ -50,11 +52,17 @@ These scripts are designed to be fetched on demand (no permanent installation re
 Example aliases:
 
 ```bash
-alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh)'
-alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net-restore.sh)'
+alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net.sh)'
+alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.0/git-safety-net-restore.sh)'
 ```
 
 `gsn` can add aliases automatically during onboarding (idempotently, in a marked block).
+
+## Typical workflow
+
+1. Start protection once from `curl` (or use `gsn` alias after onboarding).
+2. Keep coding while snapshots are recorded in the hidden store.
+3. Use `gsnr --list`, then restore a specific file by time when needed.
 
 ## Default local storage
 
@@ -106,9 +114,13 @@ After onboarding, normal runs are non-interactive.
 `gsnr` restores one file, from the latest snapshot at or before your requested time.
 
 - `--list` shows recent snapshot times
+- `--list` shows recent snapshot times in local time
 - `--dry-run` previews what would be restored
+- restore refuses to overwrite an existing different file unless `--force` is passed
 - restore does not mutate the hidden backup repo
 - if file did not exist at that time, you get a clear message and no write occurs
+
+Safety default: restore will not overwrite a different existing file unless you pass `--force`.
 
 ## Common commands
 
@@ -160,6 +172,12 @@ Dry-run restore:
 ./git-safety-net-restore.sh --file src/auth.py --time "2026-04-01 14:30" --dry-run
 ```
 
+Force overwrite during restore:
+
+```bash
+./git-safety-net-restore.sh --file src/auth.py --time "2026-04-01 14:30" --force
+```
+
 ## Requirements
 
 - Bash (macOS or Linux)
@@ -171,3 +189,9 @@ Dry-run restore:
 - Hidden Git is an implementation detail for reliable snapshots.
 - You do not need commit hashes or Git commands to use the tool.
 - Your source project's existing Git history remains untouched.
+
+## Troubleshooting
+
+- `Another watcher is already running...` means a watcher lock exists for that project.
+- Stop the other watcher (Ctrl+C in its terminal) and run again.
+- If a watcher crashed, rerun `gsn`; stale lock recovery is handled automatically.
