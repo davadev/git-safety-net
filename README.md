@@ -26,7 +26,7 @@ First-time usage is meant to start directly from `curl` against this repository.
 First use is intentionally one-off via `curl` from this repository. From the project you want to protect, run:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.3/git-safety-net.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.4/git-safety-net.sh)
 ```
 
 That first run starts onboarding and can optionally install `gsn` / `gsnr` aliases in your shell rc so future use is shorter.
@@ -42,7 +42,7 @@ On first run, onboarding asks you to confirm source path, backup root, interval,
 Then restore a file by time:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.3/git-safety-net-restore.sh) --file src/auth.py --time "2026-04-01 14:30"
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.4/git-safety-net-restore.sh) --file src/auth.py --time "2026-04-01 14:30"
 ```
 
 ## Remote-use model (curl-friendly)
@@ -52,8 +52,8 @@ These scripts are designed to be fetched on demand (no permanent installation re
 Example aliases:
 
 ```bash
-alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.3/git-safety-net.sh)'
-alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.3/git-safety-net-restore.sh)'
+alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.4/git-safety-net.sh)'
+alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.4/git-safety-net-restore.sh)'
 ```
 
 `gsn` can add aliases automatically during onboarding (idempotently, in a marked block).
@@ -113,12 +113,14 @@ After onboarding, normal runs are non-interactive.
 
 ## Restore behavior
 
-`gsnr` restores one file, from the latest snapshot at or before your requested time.
+`gsnr` restores from the latest snapshot at or before your requested time.
 
 - `--list` shows recent snapshot times
 - `--list` shows recent snapshot times in local time
+- `--list-files` shows files available in the selected snapshot
 - `--dry-run` previews what would be restored
 - restore refuses to overwrite an existing different file unless `--force` is passed
+- full-project restore (`--restore-all`) requires `--force` to apply
 - restore does not mutate the hidden backup repo
 - if file did not exist at that time, you get a clear message and no write occurs
 
@@ -178,6 +180,18 @@ Force overwrite during restore:
 
 ```bash
 ./git-safety-net-restore.sh --file src/auth.py --time "2026-04-01 14:30" --force
+```
+
+List files in selected snapshot:
+
+```bash
+./git-safety-net-restore.sh --list-files --time "2026-04-01 14:30"
+```
+
+Dry-run full project restore:
+
+```bash
+./git-safety-net-restore.sh --restore-all --time "2026-04-01 14:30" --dry-run
 ```
 
 ## Requirements

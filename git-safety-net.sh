@@ -4,7 +4,7 @@ IFS=$'\n\t'
 
 DEFAULT_BASE="${HOME}/.git-safety-net"
 DEFAULT_INTERVAL=180
-PROJECT_VERSION="v1.0.3"
+PROJECT_VERSION="v1.0.4"
 REMOTE_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net.sh"
 REMOTE_GSNR_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net-restore.sh"
 REMOTE_MAIN_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh"

@@ -47,4 +47,4 @@
    - `git tag -a vX.Y.Z -m "git-safety-net vX.Y.Z"`
    - `git push origin vX.Y.Z`
 9. Publish GitHub release:
-   - `gh release create vX.Y.Z --title "git-safety-net vX.Y.Z" --notes-file RELEASE_NOTES_vX.Y.Z.md`
+   - `gh release create vX.Y.Z --title "git-safety-net vX.Y.Z" --notes-file RELEASE_NOTES.md`

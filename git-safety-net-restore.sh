@@ -10,6 +10,8 @@ FILE_INPUT=""
 TIME_INPUT=""
 DRY_RUN=0
 LIST_MODE=0
+LIST_FILES_MODE=0
+RESTORE_ALL_MODE=0
 FORCE=0
 
 META_NAME=""
@@ -31,12 +33,16 @@ Options:
   --time VALUE         Restore file as of this time (default: latest snapshot)
   --dry-run            Show what would be restored
   --list               Show recent snapshot times
+  --list-files         List files in selected snapshot
+  --restore-all        Restore full project tree from snapshot (requires --force)
   --force              Overwrite an existing different file
 
 Examples:
   ./git-safety-net-restore.sh --list
   ./git-safety-net-restore.sh --file src/auth.py --time "2026-04-01 14:30"
   ./git-safety-net-restore.sh --source ~/code/backend --file app/main.py --dry-run
+  ./git-safety-net-restore.sh --list-files --time "2026-04-01 14:30"
+  ./git-safety-net-restore.sh --restore-all --time "2026-04-01 14:30" --dry-run
 EOF
 }
 
@@ -125,6 +131,55 @@ find_commit_for_time() {
   printf '%s\n' "$commit"
 }
 
+print_selected_snapshot() {
+  local backup="$1"
+  local commit="$2"
+  local commit_time="$3"
+  local short
+  short="$(git -C "$backup" rev-parse --short "$commit")"
+  log "Selected snapshot: $commit_time ($short)"
+  if [ -n "$TIME_INPUT" ]; then
+    log "Note: restore uses the latest snapshot at or before the requested time."
+  fi
+}
+
+restore_all() {
+  local backup="$1"
+  local source="$2"
+  local commit="$3"
+  local commit_time="$4"
+  local short
+  local tmp_dir
+  local file_count
+
+  require_cmd rsync
+  require_cmd tar
+
+  short="$(git -C "$backup" rev-parse --short "$commit")"
+
+  if [ "$FORCE" -ne 1 ] && [ "$DRY_RUN" -ne 1 ]; then
+    die "Refusing full-project restore without --force. Use --dry-run to preview or --force to apply."
+  fi
+
+  tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/gsnr.XXXXXX")"
+
+  git -C "$backup" archive "$commit" | tar -x -C "$tmp_dir"
+  file_count="$(git -C "$backup" ls-tree -r --name-only "$commit" | wc -l | tr -d ' ')"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "Dry run: would restore full project tree from snapshot at $commit_time ($short)"
+    log "Dry run: snapshot contains $file_count files"
+    rsync -a --delete --dry-run "$tmp_dir/" "$source/" >/dev/null
+    rm -rf "$tmp_dir"
+    return 0
+  fi
+
+  rsync -a --delete "$tmp_dir/" "$source/"
+  rm -rf "$tmp_dir"
+  log "Restored project tree from snapshot at $commit_time ($short)"
+  log "Restored files: $file_count"
+}
+
 parse_args() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -135,6 +190,8 @@ parse_args() {
       --time) [ "$#" -ge 2 ] || die "--time requires a value"; TIME_INPUT="$2"; shift ;;
       --dry-run) DRY_RUN=1 ;;
       --list) LIST_MODE=1 ;;
+      --list-files) LIST_FILES_MODE=1 ;;
+      --restore-all|-a) RESTORE_ALL_MODE=1 ;;
       --force) FORCE=1 ;;
       *) die "Unknown option: $1" ;;
     esac
@@ -168,14 +225,26 @@ main() {
     exit 0
   fi
 
-  validate_relative_file "$FILE_INPUT"
-
   commit="$(find_commit_for_time "$backup" "$TIME_INPUT" || true)"
   [ -n "$commit" ] || die "No snapshot found at or before requested time"
   commit_time="$(git -C "$backup" show -s --date=local --format='%ad' "$commit")"
 
+  if [ "$LIST_FILES_MODE" -eq 1 ]; then
+    git -C "$backup" ls-tree -r --name-only "$commit" | LC_ALL=C sort
+    exit 0
+  fi
+
+  print_selected_snapshot "$backup" "$commit" "$commit_time"
+
+  if [ "$RESTORE_ALL_MODE" -eq 1 ]; then
+    restore_all "$backup" "$source" "$commit" "$commit_time"
+    exit 0
+  fi
+
+  validate_relative_file "$FILE_INPUT"
+
   if ! git -C "$backup" cat-file -e "$commit:$FILE_INPUT" 2>/dev/null; then
-    die "File '$FILE_INPUT' did not exist in snapshot at $commit_time"
+    die "File '$FILE_INPUT' did not exist in the selected snapshot. Use --list-files or try a different --time."
   fi
 
   target="$source/$FILE_INPUT"
@@ -194,7 +263,7 @@ main() {
   if [ -f "$target" ] && [ "$FORCE" -ne 1 ]; then
     if cmp -s "$target" "$tmp"; then
       rm -f "$tmp"
-      log "File already matches snapshot; nothing to overwrite"
+      log "Current file already matches the selected snapshot; nothing to restore"
       exit 0
     fi
     rm -f "$tmp"
