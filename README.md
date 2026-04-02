@@ -21,7 +21,15 @@ You interact with it as **protect** and **restore by time**. Git is used interna
 
 ## Quick start
 
-Run from the project you want to protect:
+First use is intentionally one-off via `curl` from this repository. From the project you want to protect, run:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh)
+```
+
+That first run starts onboarding and can optionally install `gsn` / `gsnr` aliases in your shell rc so future use is shorter.
+
+If you already have the script locally, you can also run:
 
 ```bash
 ./git-safety-net.sh
@@ -32,7 +40,7 @@ On first run, onboarding asks you to confirm source path, backup root, interval,
 Then restore a file by time:
 
 ```bash
-./git-safety-net-restore.sh --file src/auth.py --time "2026-04-01 14:30"
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net-restore.sh) --file src/auth.py --time "2026-04-01 14:30"
 ```
 
 ## Remote-use model (curl-friendly)
