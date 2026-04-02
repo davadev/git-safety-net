@@ -42,8 +42,8 @@ These scripts are designed to be fetched on demand (no permanent installation re
 Example aliases:
 
 ```bash
-alias gsn='bash <(curl -fsSL https://example.com/git-safety-net.sh)'
-alias gsnr='bash <(curl -fsSL https://example.com/git-safety-net-restore.sh)'
+alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh)'
+alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net-restore.sh)'
 ```
 
 `gsn` can add aliases automatically during onboarding (idempotently, in a marked block).

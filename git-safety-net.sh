@@ -70,7 +70,12 @@ Examples:
 EOF
 }
 
-log() { [ "$QUIET" -eq 0 ] && printf '%s\n' "$*"; }
+log() {
+  if [ "$QUIET" -eq 0 ]; then
+    printf '%s\n' "$*"
+  fi
+  return 0
+}
 warn() { printf 'Warning: %s\n' "$*" >&2; }
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 
@@ -111,7 +116,8 @@ resolve_abs_path() {
     local d b
     d="$(dirname "$p")"
     b="$(basename "$p")"
-    (cd "$d" >/dev/null 2>&1 && printf '%s/%s\n' "$(pwd -P)" "$b")
+    [ -d "$d" ] || die "Parent directory does not exist: $d"
+    (cd "$d" >/dev/null 2>&1 && printf '%s/%s\n' "$(pwd -P)" "$b") || die "Could not resolve path: $p"
   fi
 }
 
@@ -145,7 +151,7 @@ compute_expire_epoch() {
   local now
   now="$(epoch_now)"
 
-  if [ -z "$in" ]; then
+  if [ -z "$in" ] || [ "$in" = "end-of-day" ] || [ "$in" = "eod" ]; then
     parse_absolute_time_to_epoch "$(date '+%Y-%m-%d') 23:59:59" || die "Cannot compute end-of-day"
     return 0
   fi
@@ -184,8 +190,13 @@ validate_paths() {
   [ -d "$source" ] || die "Source directory does not exist: $source"
   mkdir -p "$(dirname "$backup")" || die "Cannot create backup parent"
   [ -w "$(dirname "$backup")" ] || die "Backup parent is not writable"
-  is_within "$backup" "$source" && die "Invalid configuration: backup cannot be inside source"
-  is_within "$source" "$backup" && die "Invalid configuration: source cannot be inside backup"
+  if is_within "$backup" "$source"; then
+    die "Invalid configuration: backup cannot be inside source"
+  fi
+  if is_within "$source" "$backup"; then
+    die "Invalid configuration: source cannot be inside backup"
+  fi
+  return 0
 }
 
 load_metadata() {
@@ -246,8 +257,8 @@ setup_aliases() {
   fi
   {
     printf '\n# >>> git-safety-net aliases >>>\n'
-    printf "alias gsn='bash <(curl -fsSL https://example.com/git-safety-net.sh)'\n"
-    printf "alias gsnr='bash <(curl -fsSL https://example.com/git-safety-net-restore.sh)'\n"
+    printf "alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh)'\n"
+    printf "alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net-restore.sh)'\n"
     printf '# <<< git-safety-net aliases <<<\n'
   } >> "$rc"
   log "Alias added to $rc"

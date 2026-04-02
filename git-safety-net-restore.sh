@@ -59,7 +59,8 @@ resolve_abs_path() {
     local d b
     d="$(dirname "$p")"
     b="$(basename "$p")"
-    (cd "$d" >/dev/null 2>&1 && printf '%s/%s\n' "$(pwd -P)" "$b")
+    [ -d "$d" ] || die "Parent directory does not exist: $d"
+    (cd "$d" >/dev/null 2>&1 && printf '%s/%s\n' "$(pwd -P)" "$b") || die "Could not resolve path: $p"
   fi
 }
 
@@ -94,11 +95,20 @@ load_metadata() {
 
 validate_relative_file() {
   local f="$1"
+  local segment
+  local -a segments
   [ -n "$f" ] || die "--file is required unless --list is used"
   case "$f" in
     /*) die "--file must be relative to the source project" ;;
-    *".."*|*"../"*|"../"*|*"/.."*) die "--file cannot contain parent traversal" ;;
   esac
+
+  IFS='/' read -r -a segments <<< "$f"
+  for segment in "${segments[@]}"; do
+    if [ "$segment" = ".." ]; then
+      die "--file cannot contain parent traversal"
+    fi
+  done
+  return 0
 }
 
 find_commit_for_time() {
@@ -174,7 +184,10 @@ main() {
   fi
 
   mkdir -p "$(dirname "$target")"
-  git -C "$backup" show "$commit:$FILE_INPUT" > "$target"
+  local tmp
+  tmp="${target}.tmp.$$"
+  git -C "$backup" show "$commit:$FILE_INPUT" > "$tmp"
+  mv "$tmp" "$target"
   log "Restored to $target"
 }
 
