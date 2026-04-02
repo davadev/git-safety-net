@@ -4,7 +4,7 @@ IFS=$'\n\t'
 
 DEFAULT_BASE="${HOME}/.git-safety-net"
 DEFAULT_INTERVAL=180
-PROJECT_VERSION="v1.0.1"
+PROJECT_VERSION="v1.0.2"
 REMOTE_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net.sh"
 REMOTE_GSNR_URL="https://raw.githubusercontent.com/davadev/git-safety-net/${PROJECT_VERSION}/git-safety-net-restore.sh"
 REMOTE_MAIN_GSN_URL="https://raw.githubusercontent.com/davadev/git-safety-net/main/git-safety-net.sh"
@@ -36,7 +36,7 @@ ONB_SOURCE=""
 ONB_BACKUP_ROOT=""
 ONB_INTERVAL=""
 ONB_EXPIRE=""
-ONB_ALIAS_MODE="remote"
+ONB_ALIAS_MODE="local"
 
 EXCLUDE_DEFAULTS=(
   ".git/" ".venv/" "venv/" "env/" "node_modules/" "dist/" "build/" "target/" "out/"
@@ -267,7 +267,7 @@ setup_aliases() {
   touch "$rc"
 
   if [ "$mode" = "local" ]; then
-    local_dir="$DEFAULT_BASE/bin"
+    local_dir="$DEFAULT_BASE"
     local_gsn="$local_dir/git-safety-net.sh"
     local_gsnr="$local_dir/git-safety-net-restore.sh"
     mkdir -p "$local_dir"
@@ -338,13 +338,13 @@ run_onboarding() {
     add_aliases="yes"
   fi
 
-  alias_mode="remote"
+  alias_mode="local"
   if [ "$add_aliases" = "yes" ]; then
-    printf 'Alias mode: [1] remote (most convenient), [2] local (~/.git-safety-net/) [1]: '
+    printf 'Alias mode: [1] local (~/.git-safety-net/), [2] remote (most convenient) [1]: '
     read -r alias_choice || die "Input aborted"
     case "${alias_choice:-1}" in
-      2|local|LOCAL) alias_mode="local" ;;
-      *) alias_mode="remote" ;;
+      2|remote|REMOTE) alias_mode="remote" ;;
+      *) alias_mode="local" ;;
     esac
   fi
   ONB_ALIAS_MODE="$alias_mode"

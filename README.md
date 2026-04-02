@@ -26,7 +26,7 @@ First-time usage is meant to start directly from `curl` against this repository.
 First use is intentionally one-off via `curl` from this repository. From the project you want to protect, run:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.1/git-safety-net.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.2/git-safety-net.sh)
 ```
 
 That first run starts onboarding and can optionally install `gsn` / `gsnr` aliases in your shell rc so future use is shorter.
@@ -42,7 +42,7 @@ On first run, onboarding asks you to confirm source path, backup root, interval,
 Then restore a file by time:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.1/git-safety-net-restore.sh) --file src/auth.py --time "2026-04-01 14:30"
+bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.2/git-safety-net-restore.sh) --file src/auth.py --time "2026-04-01 14:30"
 ```
 
 ## Remote-use model (curl-friendly)
@@ -52,12 +52,12 @@ These scripts are designed to be fetched on demand (no permanent installation re
 Example aliases:
 
 ```bash
-alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.1/git-safety-net.sh)'
-alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.1/git-safety-net-restore.sh)'
+alias gsn='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.2/git-safety-net.sh)'
+alias gsnr='bash <(curl -fsSL https://raw.githubusercontent.com/davadev/git-safety-net/v1.0.2/git-safety-net-restore.sh)'
 ```
 
 `gsn` can add aliases automatically during onboarding (idempotently, in a marked block).
-Setup now lets you choose alias mode: remote URL (most convenient) or local installed scripts under `~/.git-safety-net/bin/`.
+Setup now lets you choose alias mode: remote URL (most convenient) or local installed scripts under `~/.git-safety-net/`.
 You can rerun `--setup` later to switch alias mode.
 
 ## Typical workflow
